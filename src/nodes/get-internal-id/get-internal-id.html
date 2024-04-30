@@ -1,0 +1,100 @@
+<script type="text/javascript">
+    RED.nodes.registerType('get-internal-id',{
+        category: 'Cumulocity',
+        color: '#a6bbcf',
+        defaults: {
+            name: {value:""},
+            c8yconfig: {vlaue:"", type:"c8y-config"},
+            
+            externalid: {
+                value:"",
+                required: true,
+                validate: RED.validators.typedInput('externalidType')
+            },
+            externalidType: {
+                value: "str"
+            },
+
+            externalidtype: {
+                value: "c8y_Serial",
+                required: true,
+                validate: RED.validators.typedInput('externalidtypeType')
+            },
+            externalidtypeType: {
+                value: "str"
+            },
+            
+            createdevice: {value: false},
+
+            params: {
+                value: "",
+                required: false,
+                validate: RED.validators.typedInput('paramsType')
+            },
+            paramsType: {
+                value: "json"
+            },
+        },
+        inputs:1,
+        outputs:1,
+        icon: "file.png",
+        label: function() {
+            return this.name||"get-internal-id";
+        },
+        oneditprepare: function() {
+            $('#node-input-externalid').typedInput({
+                default: 'str',
+                typeField: $("#node-input-externalidType"),
+                types: ['msg','str']
+            });
+            $('#node-input-externalidtype').typedInput({
+                default: 'str',
+                typeField: $("#node-input-externalidtypeType"),
+                types: ['msg','str']
+            });
+            $('#node-input-params').typedInput({
+                default: 'json',
+                typeField: $("#node-input-paramsType"),
+                types: ['msg','json']
+            });
+            $('#node-input-createdevice').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#params').show();
+                } else {
+                    $('#params').hide();
+                }
+            });
+        },
+
+    });
+</script>
+
+<script type="text/html" data-template-name="get-internal-id">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-externalid"><i class="fa fa-tag"></i> External Id</label>
+        <input type="text" id="node-input-externalid" placeholder="e.g. myexternalid">
+        <input type="hidden" id="node-input-externalidType">
+    </div>
+    <div class="form-row">
+        <label for="node-input-externalidtype"><i class="fa fa-tag"></i> External Id Type</label>
+        <input type="text" id="node-input-externalidtype" placeholder="e.g. c8y_Serial">
+        <input type="hidden" id="node-input-externalidtypeType">
+    </div>
+    <div class="form-row">
+        <label for="node-input-createdevice"><i class="fa fa-tag"></i> Create Device</label>
+        <input type="checkbox" id="node-input-createdevice"/>
+    </div>
+    <div class="form-row hidden" id="params">    
+        <label for="node-input-params"><i class="fa fa-tag"></i> Params</label>
+        <input type="text" id="node-input-params">
+        <input type="hidden" id="node-input-paramsType">
+    </div>
+</script>
+
+<script type="text/html" data-help-name="get-internal-id">
+    <p>A node to get the internal id by by providing external-id and external-id-type.</p>
+</script>

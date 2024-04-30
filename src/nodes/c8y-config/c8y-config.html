@@ -1,0 +1,63 @@
+<script type="text/javascript">
+    RED.nodes.registerType('c8y-config',{
+        category: 'config',
+        color: '#a6bbcf',
+        defaults: {
+            name: {value:""},
+
+            c8ytenant: {
+                value:"",
+                required: true
+            },
+            c8yurl: {
+                value:"",
+                required: true
+            },
+            
+
+        },
+        credentials:{
+            c8yuser:	{username:"",required: true, type :"text"},
+            c8ypassword:	{password:"", required: true, type:"password"},
+            },
+        inputs:1,
+        outputs:1,
+        icon: "file.png",
+        label: function() {
+            return this.name||"get-internal-id";
+        },
+        oneditprepare: function() {
+
+        },
+
+    });
+</script>
+
+<script type="text/html" data-template-name="get-internal-id">
+    <div class="form-row">
+        <label for="node-config-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-config-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-config-c8ytenant"><i class="fa fa-tag"></i> Tenant</label>
+        <input type="text" id="node-config-tenant" placeholder="e.g. myexternalid">
+    </div>
+    <div class="form-row">
+        <label for="node-config-c8yurl"><i class="fa fa-tag"></i> t77483839</label>
+        <input type="text" id="node-config-c8yurl" placeholder="">
+    </div>
+    <div class="form-row">
+        <label for="node-config-c8yuser"><i class="fa fa-tag"></i> Herbert@aol.com</label>
+        <input type="text" id="node-config-c8yuser" placeholder="">
+    </div>
+    <div class="form-row">
+        <label for="node-config-c8ypassword"><i class="fa fa-tag"></i> xyz!!!</label>
+        <input type="text" id="node-config-c8ypassword" placeholder="">
+    </div>
+    
+
+</script>
+
+<script type="text/html" data-help-name="c8y-config">
+    <p>A node to get configure a cumulocity connection.</p>
+</script>
