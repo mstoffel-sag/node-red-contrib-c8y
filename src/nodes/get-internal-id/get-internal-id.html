@@ -4,7 +4,7 @@
         color: '#a6bbcf',
         defaults: {
             name: {value:""},
-            c8yconfig: {vlaue:"", type:"c8y-config"},
+            c8yconfig: {value:"", type:"c8yconfig"},
             
             externalid: {
                 value:"",
@@ -29,7 +29,16 @@
             params: {
                 value: "",
                 required: false,
-                validate: RED.validators.typedInput('paramsType')
+                validate: function(){
+               
+                   console.log("createdevice " , this.createdevice, " validate: " +RED.validators.typedInput('paramsType')());
+                    if (this.createdevice) {
+                        return RED.validators.typedInput('paramsType')();
+
+                    }else{
+                        return function(){return true;}();
+                    }
+                }
             },
             paramsType: {
                 value: "json"
@@ -73,6 +82,10 @@
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-c8yconfig"><i class="fa fa-tag"></i> C8y config</label>
+        <input type="text" id="node-input-c8yconfig" placeholder="c8yconfig">
     </div>
     <div class="form-row">
         <label for="node-input-externalid"><i class="fa fa-tag"></i> External Id</label>
