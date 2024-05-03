@@ -10,19 +10,19 @@ module.exports = function(RED) {
         
         node.on('input', async function(msg) {
           try {
-            node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
-            if (node.c8yconfig) {
-              node.C8Y_TENANT = node.c8yconfig.c8ytenant;
-            }else{
-              node.error('No config found');
-              return;
-            }
-            if (node.C8Y_TENANT == 'env'){
+            if (node.config.useenv === true){
               node.C8Y_TENANT = process.env.C8Y_TENANT;
               node.C8Y_BASEURL = process.env.C8Y_BASEURL;
               node.C8Y_USER = process.env.C8Y_USER;
               node.C8Y_PASSWORD = process.env.C8Y_PASSWORD;
             }else{
+              node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
+              if (node.c8yconfig) {
+                node.C8Y_TENANT = node.c8yconfig.c8ytenant;
+              }else{
+                node.error('No config found');
+                return;
+              }
               node.C8Y_TENANT = node.c8yconfig.c8ytenant;
               node.C8Y_BASEURL = node.c8yconfig.c8yurl;
               node.C8Y_USER = node.c8yconfig.credentials.c8yuser;
@@ -33,10 +33,11 @@ module.exports = function(RED) {
             const user = node.C8Y_USER;
             const password = node.C8Y_PASSWORD;
             const auth = new c8yClientLib.BasicAuth({
-              tenant,
-              user,
-              password,
+              tenant: node.C8Y_TENANT,
+              user: node.C8Y_USER,
+              password: node.C8Y_PASSWORD,
             });
+            console.log("auth " , auth);
             node.client = new c8yClientLib.Client(auth, node.C8Y_BASEURL);
             node.client.core.tenant = node.C8Y_TENANT;
             // Get properties
@@ -52,22 +53,20 @@ module.exports = function(RED) {
                 node,
                 msg
                 );
-              if (node.config.createdevice) {
-                params = RED.util.evaluateNodeProperty(
-                  node.config.params,
-                  node.config.paramsType,
-                  node,
-                  msg
-                  );
-              }
+                console.log("########");
+                if (node.config.createdevice) {
+                  params = RED.util.evaluateNodeProperty(
+                    node.config.params,
+                    node.config.paramsType,
+                    node,
+                    msg
+                    );
+                  }
                   node.log("Config: " + node.C8Y_TENANT + node.C8Y_BASEURL + node.C8Y_PASSWORD + node.C8Y_USER);
                 } catch (error) {
                   node.error("Extracting Properties " +error);
                   return;
                 }
-                
-          node.debug("Config: externalId: " + externalId +  " externalIdType: " + externalIdType )
-          
           if (externalId === undefined) {
             node.error( "Error externalId is undefined.");
             return;

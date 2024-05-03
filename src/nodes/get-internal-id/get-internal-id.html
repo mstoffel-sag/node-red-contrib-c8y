@@ -5,6 +5,7 @@
         defaults: {
             name: {value:""},
             c8yconfig: {value:"", type:"c8yconfig"},
+            useenv: {value: false},
             
             externalid: {
                 value:"",
@@ -29,14 +30,14 @@
             params: {
                 value: "",
                 required: false,
-                validate: function(){
-               
-                   console.log("createdevice " , this.createdevice, " validate: " +RED.validators.typedInput('paramsType')());
-                    if (this.createdevice) {
-                        return RED.validators.typedInput('paramsType')();
-
+                validate: function(v){
+                    var cd = $('#node-input-createdevice');
+                    if (cd.is(':checked')) {
+                        console.log("checked");
+                        return RED.validators.typedInput('paramsType')(v);
                     }else{
-                        return function(){return true;}();
+                        console.log("not checked");
+                        return true;
                     }
                 }
             },
@@ -67,10 +68,18 @@
                 types: ['msg','json']
             });
             $('#node-input-createdevice').change(function() {
+                
                 if ($(this).is(':checked')) {
                     $('#params').show();
                 } else {
                     $('#params').hide();
+                }
+            });
+            $('#node-input-useenv').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#c8yconfig-row').hide();
+                } else {
+                    $('#c8yconfig-row').show();
                 }
             });
         },
@@ -84,6 +93,10 @@
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
     <div class="form-row">
+        <label for="node-input-useenv"><i class="fa fa-tag"></i> Use ENV</label>
+        <input type="checkbox" id="node-input-useenv"/>
+    </div>
+    <div class="form-row" id="c8yconfig-row">
         <label for="node-input-c8yconfig"><i class="fa fa-tag"></i> C8y config</label>
         <input type="text" id="node-input-c8yconfig" placeholder="c8yconfig">
     </div>
