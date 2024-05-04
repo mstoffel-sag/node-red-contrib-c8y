@@ -1,64 +1,35 @@
 <script type="text/javascript">
-    RED.nodes.registerType('get-internal-id',{
+    RED.nodes.registerType('get-external-id',{
         category: 'Cumulocity',
         color: '#a6bbcf',
         defaults: {
-            
             name: {value:""},
             c8yconfig: {value:"", type:"c8yconfig"},
             useenv: {value: false},
             
-            externalid: {
+            internalid: {
                 value:"",
                 required: true,
-                validate: RED.validators.typedInput('externalidType')
+                validate: RED.validators.typedInput('internalidType')
             },
-            externalidType: {
+           
+            internalidType: {
                 value: "str"
-            },
-
-            externalidtype: {
-                value: "c8y_Serial",
-                required: true,
-                validate: RED.validators.typedInput('externalidtypeType')
-            },
-            externalidtypeType: {
-                value: "str"
-            },
-            
-            createdevice: {value: false},
-
-            params: {
-                value: "",
-                required: false,
-                validate: function(v){
-                    var cd = $('#node-input-createdevice');
-                    if (cd.is(':checked')) {
-                        console.log("checked");
-                        return RED.validators.typedInput('paramsType')(v);
-                    }else{
-                        console.log("not checked");
-                        return true;
-                    }
-                }
-            },
-            paramsType: {
-                value: "json"
-            },
+            }
         },
         inputs:1,
         outputs:1,
         icon: "file.png",
         label: function() {
-            return this.name||"get-internal-id";
+            return this.name||"get-external-id";
         },
         oneditprepare: function() {
-            $('#node-input-externalid').typedInput({
+            $('#node-input-internallid').typedInput({
                 default: 'str',
-                typeField: $("#node-input-externalidType"),
+                typeField: $("#node-input-internalidType"),
                 types: ['msg','str']
             });
-            $('#node-input-externalidtype').typedInput({
+            $('#node-input-internalidtype').typedInput({
                 default: 'str',
                 typeField: $("#node-input-externalidtypeType"),
                 types: ['msg','str']
@@ -88,7 +59,7 @@
     });
 </script>
 
-<script type="text/html" data-template-name="get-internal-id">
+<script type="text/html" data-template-name="get-external-id">
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
@@ -122,6 +93,6 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="get-internal-id">
-    <p>A node to get the internal id by by providing external-id and external-id-type.</p>
+<script type="text/html" data-help-name="get-external-id">
+    <p>A node to get the external id by by providing internal-id and external-id-type.</p>
 </script>

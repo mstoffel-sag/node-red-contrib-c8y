@@ -1,17 +1,17 @@
-
-const {createDeviceandAddExternalId, getCredentials} = require("../c8y-utils/c8y-utils");
+const c8yClientLib = require('@c8y/client');
+const createDeviceandAddExternalId = require("../c8y-utils/c8y-utils");
+const getCredentials = require("../c8y-utils/c8y-utils");
+const util = require("util");
 
 module.exports = function(RED) {
-    function GetInternalIdCallNode(config) {
+    function GetExternalIdCallNode(config) {
         RED.nodes.createNode(this,config);
         var node = this;
         node.config = config;
-        node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
+        
         node.on('input', async function(msg) {
           try {
-            getCredentials(RED,node);
-
-            // Get properties
+            getCredentials(node);
             externalIdType = RED.util.evaluateNodeProperty(
               node.config.externalidtype,
               node.config.externalidtypeType,
@@ -24,6 +24,7 @@ module.exports = function(RED) {
                 node,
                 msg
                 );
+                console.log("########");
                 if (node.config.createdevice) {
                   params = RED.util.evaluateNodeProperty(
                     node.config.params,
@@ -57,6 +58,9 @@ module.exports = function(RED) {
           const res = await node.client.core.fetch(
             "/identity/externalIds/" + externalIdType + "/" + externalId,
             fetchOptions
+          );
+          node.trace(
+            "Get InternalId Response: " + util.inspect(res, { depth: null })
           );
           msg.status = res.status;
           delete msg.body;
@@ -108,6 +112,6 @@ module.exports = function(RED) {
           }
       });
     }
-    RED.nodes.registerType("get-internal-id", GetInternalIdCallNode);
+    RED.nodes.registerType("get-external-id", GeExternalIdCallNode);
 }
 
