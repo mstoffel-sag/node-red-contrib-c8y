@@ -9,7 +9,6 @@ module.exports = function(RED) {
       var node = this;
       node.config = config;
       node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
-
       node.on("input", function (msg) {
         getCredentials(RED, node);
         const fetchOptions = {
