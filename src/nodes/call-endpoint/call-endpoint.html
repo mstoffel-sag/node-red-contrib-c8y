@@ -7,9 +7,30 @@
             name: {value:""},
             c8yconfig: {value:"", type:"c8yconfig"},
             useenv: {value: false},
-            method: {value:"GET"},
-            endpoint: {value: ''},
-
+            method: {
+                value:"GET",
+                required: true,
+                validate: RED.validators.typedInput('methodType')
+            },
+            methodType: {
+                value: "Select"
+            },
+            endpoint: {
+                value: '',
+                required: true,
+                validate: RED.validators.typedInput('endpointType')
+            },
+            endpointType: {
+                value: 'str',
+            },
+            body: {
+                value:"",
+                required: true,
+                validate: RED.validators.typedInput('bodyType')
+            },
+            bodyType: {
+                value: "json"
+            }
         },
         inputs:1,
         outputs:1,
@@ -19,7 +40,33 @@
         },
         oneditprepare: function() {
  
-            //$("#node-input-name").parent().append($(getHeader()));
+            $('#node-input-method').typedInput({
+                default: 'Select',
+                typeField: $("#node-input-methodType"),
+                types: [
+                    'msg',
+                    {
+                        value: "Select",
+                        multiple: false,
+                        options: [
+                            "GET",
+                            "POST",
+                            "DELETE",
+                            "PUT"
+                        ]
+                    }
+                ]
+            });
+            $('#node-input-body').typedInput({
+                default: 'str',
+                typeField: $("#node-input-bodyType"),
+                types: ['msg','json']
+            });
+            $('#node-input-endpoint').typedInput({
+                default: 'str',
+                typeField: $("#node-input-endpointType"),
+                types: ['msg','str']
+            });
             $('#node-input-useenv').change(function() {
                 if ($(this).is(':checked')) {
                     $('#c8yconfig-row').hide();
@@ -32,7 +79,7 @@
 </script>
 
 <script type="text/html" data-template-name="call-endpoint">
-    <div class="form-row" id="test">
+    <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
@@ -47,10 +94,17 @@
     <div class="form-row">
         <label for="node-input-endpoint"><i class="fa fa-tag"></i> Endpoint</label>
         <input type="text" id="node-input-endpoint" placeholder="e.g. /service/where-am-i/findMe">
+        <input type="hidden" id="node-input-endpointType">
     </div>
     <div class="form-row">
         <label for="node-input-method"><i class="fa fa-tag"></i> Method</label>
-        <input type="text" id="node-input-method" placeholder="e.g. GET">
+        <input type="text" id="node-input-method" placeholder="GET">
+        <input type="hidden" id="node-input-methodType">
+	</div>
+    <div class="form-row">
+        <label for="node-input-body"><i class="fa fa-tag"></i> Body</label>
+        <input type="text" id="node-input-body" placeholder="">
+        <input type="hidden" id="node-input-bodyType">
     </div>
 </script>
 

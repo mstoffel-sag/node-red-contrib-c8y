@@ -10,17 +10,52 @@ module.exports = function(RED) {
       node.config = config;
       node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
       node.on("input", function (msg) {
-        getCredentials(RED, node);
+             try {
+               getCredentials(RED, node);
+               // Get properties
+               body = RED.util.evaluateNodeProperty(
+                 node.config.body,
+                 node.config.bodyType,
+                 node,
+                 msg
+               );
+               method = RED.util.evaluateNodeProperty(
+                 node.config.method,
+                 node.config.methodType,
+                 node,
+                 msg
+               );
+               // please no body for GET
+               body = method ==="GET" ? undefined : body;
+               endpoint = RED.util.evaluateNodeProperty(
+                 node.config.endpoint,
+                 node.config.endpointType,
+                 node,
+                 msg
+               );
+               node.debug(
+                 "Config: " +
+                   node.C8Y_TENANT +
+                   " " +
+                   node.C8Y_BASEURL +
+                   " endpoint: " +
+                   endpoint
+               );
+             } catch (error) {
+               node.error("Extracting Properties " + error);
+               return;
+             }
         const fetchOptions = {
-          method: msg.method || config.method || "GET",
-          body: JSON.stringify(msg.body || config.body) || undefined,
+          method: method,
+          body: JSON.stringify(body) || undefined,
           headers: msg.headers || {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
         };
+        node.debug("Fetching: " + JSON.stringify(fetchOptions) + " Endpoint: " + endpoint);
         node.client.core
-          .fetch(msg.endpoint || config.endpoint, fetchOptions)
+          .fetch(endpoint, fetchOptions)
           .then(
             (res) => {
               msg.status = res.status;
@@ -28,18 +63,17 @@ module.exports = function(RED) {
               delete msg.headers;
               return res.json().then(
                 (json) => {
+                  node.debug("res:" + json);
                   msg.payload = json;
                   node.send(msg);
                 },
                 (error) => {
-                  msg.paylaod = error;
-                  node.send(msg);
+                  node.error(error);
                 }
               );
             },
             (error) => {
-              msg.paylaod = error;
-              node.send(msg);
+              node.error(error);
             }
           );
       });
