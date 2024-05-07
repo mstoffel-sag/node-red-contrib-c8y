@@ -3,8 +3,8 @@
         category: 'Cumulocity Realtime',
         color: '#a6bbcf',
         defaults: {
-            subscription: {value: true},
             name: {value:""},
+            active: {value: true},
             deviceId: {value:"*"},
             c8yconfig: {value:"", type:"c8yconfig"},
             useenv: {value: false},
@@ -14,33 +14,24 @@
         outputs:1,
         icon: "file.png",
         label: function() {
-            return this.name||"realtime";
+            return this.name ||"realtime-" + this.api;
         },
-        
         button: {
-            toggle: "subscription",
+            toggle: "active",
             onclick: function() {
-                i
-                console.log("ClICK " + this.buttonState);
+                var node = this;
+                console.log("ClICK " ,node.active);
                 $.ajax({
-			url: '/realtimetoggel/' ,
-			cache: false,
-			dataType: 'json',
-			method: 'GET',
-			success: function (data) {
-				console.log("Success: " + JSON.stringify(data));
-			}
-		});
+                    url: 'realtime/' + node.id +'/'+(node.active?"enable":"disable"),
+                    cache: false,
+                    dataType: 'json',
+                    method: 'GET',
+                    success: function (data) {
+                        console.log("Success: " + JSON.stringify(data));
+                    }
+		        });
             }
         }
-        // button: {
-        //     enabled: function(){
-        //         node.log("button enabled");
-        //     },
-        //     onclick: function(){
-        //         node.log("button click");
-        //     }
-        // }
     });
 </script>
 
