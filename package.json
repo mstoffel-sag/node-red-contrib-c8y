@@ -16,11 +16,13 @@
       "call-endpoint": "src/nodes/call-endpoint/call-endpoint.js",
       "get-internal-id": "src/nodes/get-internal-id/get-internal-id.js",
       "realtime": "src/nodes/realtime/realtime.js",
+      "notification": "src/nodes/notification/notification.js",
       "c8yconfig": "src/nodes/c8y-config/c8y-config.js"
     }
   },
   "dependencies": {
-    "@c8y/client": "^1018.0.143"
+    "@c8y/client": "^1018.0.143",
+    "ws": "^8.17.0"
   },
   "author": "Marco Stoffel",
   "license": "Apache-2.0"

@@ -92,7 +92,7 @@ let getCredentials = function getCredentials(RED, node) {
     password: node.C8Y_PASSWORD,
   });
   node.client = new c8yClientLib.Client(auth, node.C8Y_BASEURL);
-  node.client.core.tenant = node.C8Y_TENANT.tenant;
+  node.client.core.tenant = node.C8Y_TENANT;
 };
 module.exports = {
   createDeviceandAddExternalId,
