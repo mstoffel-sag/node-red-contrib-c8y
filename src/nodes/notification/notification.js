@@ -17,15 +17,9 @@ module.exports = function(RED) {
         console.log(node.C8Y_BASEURL);
         console.log("Client; " , node.client);
  
-        unsubscribeWS = () => {
-          if (node.socket !== undefined) {
-             node.socket.close();
-          }
-        }
 
-        subscribeWS = (token) => {
+        subscribeWS = (token,timeout) => {
             node.debug("subscribeWS", token);
-            unsubscribeWS();
             url =
             "wss://" +
             node.C8Y_BASEURL.replace(/(^\w+:|^)\/\//, "") +
@@ -38,7 +32,23 @@ module.exports = function(RED) {
             };
 
             node.socket.onmessage = function (event) {
-              node.debug(`[message] : ${event.data}`);
+
+              message = event.data.split('\n');
+              const id = message[0];
+              const source = message[1];
+              const operation = message[2];
+              const payload = message[4];
+              node.debug(`New Notification id: ${id} source: ${source} operation: ${operation} \n payload: ${payload}`);
+              const msg = {
+                payload: {
+                  id: id,
+                  source: source,
+                  operation: operation,
+                  message: JSON.parse(payload)
+                },
+              };
+              node.send(msg);
+              node.socket.send(id);
             };
 
             node.socket.onclose = function (event) {
@@ -49,10 +59,17 @@ module.exports = function(RED) {
               } else {
                 // e.g. server process killed or network down
                 // event.code is usually 1006 in this case
-                node.debug("[close] Connection died");
+                node.debug("[close] Connection died. Reconnecting.");
+              }
+              if (event.code !== 1000) {
+                node.debug("Reconnecting!");
+                setTimeout(function () {
+                  connect();
+                }, timeout);
+              } else {
+                node.log("Closing finished");
               }
             };
-
             node.socket.onerror = function (error) {
               node.error(`[error] ${error}`);
             };
@@ -100,18 +117,22 @@ module.exports = function(RED) {
 
       
         node.unsubscribeNotification = function () {
-          unsubscribeWS();
+          if (node.socket !== undefined) {
+            node.log("Closing")
+            node.socket.close(1000,"Node Deactivated");
+            node.socket= undefined;
+          }
         }
         node.subscribeNotification = async function () {
          const token = await node.getToken(node.subscriber, node.subscription, 100000);
-         subscribeWS(token);
+         subscribeWS(token,1000);
         }
 
         setNodeState(node, true);
 
         node.on('close', function() {
             node.log("on CLOSE");
-            node.unsubscribenotification();
+            node.unsubscribeNotification();
         });
     }
 
