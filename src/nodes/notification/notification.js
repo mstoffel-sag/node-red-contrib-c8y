@@ -1,6 +1,6 @@
 const c8yClientLib = require('@c8y/client');
 const {getCredentials} = require("../c8y-utils/c8y-utils");
-const WebSocket = require("ws");
+const Websocket = require("ws");
 
 module.exports = function(RED) {
     function notificationNode(config) {
@@ -11,66 +11,37 @@ module.exports = function(RED) {
         node.subscriber = node.config.subscriber;
         node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
         node.active = config.active === null || typeof config.active === "undefined" || config.active;
+        node.socket = undefined;
         getCredentials(RED, node);
         node.log("node.active: " + node.active);
         console.log(node.C8Y_BASEURL);
-        
-
-        node.subscribeWS = (token)=>{
-            token =
-              'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJkZiIsInRvcGljIjoidDE1MjY0OTcxL3JlbG5vdGlmL0R5bmFtaWNNYXBwZXJUZW5hbnRTdWJzY3JpcHRpb24iLCJqdGkiOiJhODI3MGRiMC03ZTViLTQzZGMtYjgxNC1jYTE1Y2ZlNzc3OTAiLCJpYXQiOjE3MTUxODAyODQsImV4cCI6MTcyMTE4MDI4NH0.eK8SpBu0GTjeC1KFprjvpyyOGB_MLMI4n5PWxeHk_Ak0JZ-9SwujtDBj8W7w-XW5x2HX82REXb2fDcfUvwZ0UuUJ1zmwoJELfYK_d-63O64WK2kmNfutR3O1qUbJWy6d7YEeMhVTZLw6SWz6RXGyJw0coRSt6m5b8JR2hRmLqS_Fi0H26XCQ7XtUsChN1McyiQwcVYDmcpGFTN_V9FWJiFgJbObqSNmBTKCD36ZnEZLyfonzFSa9zIHXNjfpcS-ovf4WlDICXh1WyPS4-c57oCu-stcabIY3VjoSV8UzQTrh8yXKPBcmZtWZa2duyWgnjr9wMlU-JIoiKFXE7Ie2Lg';
-            url =
-              "ws:" +
-              node.C8Y_BASEURL.replace(/(^\w+:|^)\/\//, "") +
-              "/notification2/consumer/?token=" +
-              token;
-            console.log("url: " ,url );
-            let socket = new WebSocket(url);
-            console.log("socket: " ,socket);
-            socket.onopen = function (e) {
-              node.debug("[open] Connection established");
-            };
-            socket.onmessage = function (event) {
-              node.debug(`[message] : ${event.data}`);
-            };
-
-            socket.onclose = function (event) {
-              if (event.wasClean) {
-                node.debug(
-                  `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`
-                );
-              } else {
-                // e.g. server process killed or network down
-                // event.code is usually 1006 in this case
-                node.debut("[close] Connection died");
-              }
-            };
-
-            socket.onerror = function (error) {
-              node.error(`[error]`);
-            };
-           
+        console.log("Client; " , node.client);
+ 
+        unsubscribeWS = () => {
+          if (node.socket !== undefined) {
+             node.socket.close();
+          }
         }
-          node.subscribeWS = (token) => {
-            token =
-              "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJkZiIsInRvcGljIjoidDE1MjY0OTcxL3JlbG5vdGlmL0R5bmFtaWNNYXBwZXJUZW5hbnRTdWJzY3JpcHRpb24iLCJqdGkiOiJhODI3MGRiMC03ZTViLTQzZGMtYjgxNC1jYTE1Y2ZlNzc3OTAiLCJpYXQiOjE3MTUxODAyODQsImV4cCI6MTcyMTE4MDI4NH0.eK8SpBu0GTjeC1KFprjvpyyOGB_MLMI4n5PWxeHk_Ak0JZ-9SwujtDBj8W7w-XW5x2HX82REXb2fDcfUvwZ0UuUJ1zmwoJELfYK_d-63O64WK2kmNfutR3O1qUbJWy6d7YEeMhVTZLw6SWz6RXGyJw0coRSt6m5b8JR2hRmLqS_Fi0H26XCQ7XtUsChN1McyiQwcVYDmcpGFTN_V9FWJiFgJbObqSNmBTKCD36ZnEZLyfonzFSa9zIHXNjfpcS-ovf4WlDICXh1WyPS4-c57oCu-stcabIY3VjoSV8UzQTrh8yXKPBcmZtWZa2duyWgnjr9wMlU-JIoiKFXE7Ie2Lg";
+
+        subscribeWS = (token) => {
+            node.debug("subscribeWS", token);
+            unsubscribeWS();
             url =
-              "wss://" +
-              node.C8Y_BASEURL.replace(/(^\w+:|^)\/\//, "") +
-              "/notification2/consumer/?token=" +
-              token;
+            "wss://" +
+            node.C8Y_BASEURL.replace(/(^\w+:|^)\/\//, "") +
+            "/notification2/consumer/?token=" + token;
             console.log("url: ", url);
-            let socket = new WebSocket(url);
-            console.log("socket: ", socket);
-            socket.onopen = function (e) {
+            node.socket = new Websocket(url);
+            //console.log("node.socket: ", node.socket);
+            node.socket.onopen = function (e) {
               node.debug("[open] Connection established");
             };
 
-            socket.onmessage = function (event) {
+            node.socket.onmessage = function (event) {
               node.debug(`[message] : ${event.data}`);
             };
 
-            socket.onclose = function (event) {
+            node.socket.onclose = function (event) {
               if (event.wasClean) {
                 node.debug(
                   `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`
@@ -78,64 +49,62 @@ module.exports = function(RED) {
               } else {
                 // e.g. server process killed or network down
                 // event.code is usually 1006 in this case
-                node.debut("[close] Connection died");
+                node.debug("[close] Connection died");
               }
             };
 
-            socket.onerror = function (error) {
-              node.error(`[error]`);
+            node.socket.onerror = function (error) {
+              node.error(`[error] ${error}`);
             };
-          };
+        };
 
-
-        node.subscribeNotification = async function () {
+        node.getToken = async function (
+          subscriber,
+          subscription,
+          expiresInMinutes
+        ) {
           node.log(
-            `${node.subscriber} subscribing to ${node.subscription} on tenant: ${node.C8Y_TENANT} and url: ${node.C8Y_BASEURL}`
-            );
-            node.subscribeWS();
-            if (node.subscriber !== undefined && node.subscription) {
-
+            `${subscriber} subscribing to ${subscription} on tenant: ${node.C8Y_TENANT} and url: ${node.C8Y_BASEURL}`
+          );
+          if (subscriber !== undefined && subscription != undefined) {
             const fetchOptions = {
               method: "POST",
-              body: {
-                subscription: node.subscription,
-                subscriber: node.subscriber,
-                expiresInMinutes :"1000000"
-              },
-              headers:  {
+              body: JSON.stringify({
+                subscription: subscription,
+                subscriber: subscriber,
+                expiresInMinutes: expiresInMinutes,
+              }),
+              headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/json",
-              }
+                Accept: "application/json",
+              },
             };
-
-            node.log("get Token:" + JSON.stringify(fetchOptions));
-            //console.log("node.client:" ,node.client);
             const c8yres = await node.client.core.fetch(
-              "/notification2/token",
+              "notification2/token",
               fetchOptions
             );
-            console.log("c8yres:"  ,c8yres);
             if (c8yres.status == 200) {
               try {
                 json = await c8yres.json();
-                node.log("token: " + JSON.stringify(json));
-                node.
-                return;
+                return json.token;
               } catch (error) {
                 node.error(error);
                 return;
               }
-            }else{
-               node.error(c8yres.status);
-               return;
+            } else {
+              node.error(c8yres.status);
+              return;
             }
           }
-          
-        }
+        };
 
       
         node.unsubscribeNotification = function () {
-         node.log(`${node.subscriber} unsubscribing from ${node.subscription} on tenant: ${node.C8Y_TENANT} and url: ${node.C8Y_BASEURL}`)
+          unsubscribeWS();
+        }
+        node.subscribeNotification = async function () {
+         const token = await node.getToken(node.subscriber, node.subscription, 100000);
+         subscribeWS(token);
         }
 
         setNodeState(node, true);
@@ -144,6 +113,17 @@ module.exports = function(RED) {
             node.log("on CLOSE");
             node.unsubscribenotification();
         });
+    }
+
+        // Manage node state
+    function setNodeState(node,state) {
+        if (state) {
+            node.active = true;
+            node.subscribeNotification();
+        } else {
+            node.active = false;
+            node.unsubscribeNotification();
+        }
     }
 
     RED.nodes.registerType("notification", notificationNode);
@@ -174,6 +154,7 @@ module.exports = function(RED) {
           } else {
             res.sendStatus(404);
           }
+
           //
         } else if (cmd == "getSubscriptions" && node!==undefined && node!==null && node.c8yconfig !==undefined && node.client !== undefined) {
           const fetchOptions = {
@@ -211,14 +192,4 @@ module.exports = function(RED) {
       }
     );
 
-    // Manage node state
-    function setNodeState(node,state) {
-        if (state) {
-            node.active = true;
-            node.subscribeNotification();
-        } else {
-            node.active = false;
-            node.unsubscribeNotification();
-        }
-    }
 }
