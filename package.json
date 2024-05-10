@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@c8y/client": "^1018.0.143",
+    "uuid": "^9.0.1",
     "ws": "^8.17.0"
   },
   "author": "Marco Stoffel",

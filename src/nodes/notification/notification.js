@@ -1,6 +1,7 @@
 const c8yClientLib = require('@c8y/client');
 const {getCredentials} = require("../c8y-utils/c8y-utils");
 const Websocket = require("ws");
+const uuid = require("uuid");
 
 module.exports = function(RED) {
     function notificationNode(config) {
@@ -12,98 +13,136 @@ module.exports = function(RED) {
         node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
         node.active = config.active === null || typeof config.active === "undefined" || config.active;
         node.socket = undefined;
+        node.clientId = "nodeRed" + uuid.v4().replace(/-/g, "");
         getCredentials(RED, node);
         node.log("node.active: " + node.active);
-        console.log(node.C8Y_BASEURL);
-        console.log("Client; " , node.client);
+        node.reconnectTimeout = 10000;
+        node.pingInterval = 30000;
+        node.heartBeatReference = undefined;
+        node.refreshTokenIntervalReference = undefined;
+        node.reconnectCount = 0;
+        node.expiresInMinutes = 2;
+        node.refreshTokenInterval = (node.expiresInMinutes -1) * 1000 * 60;
+        node.token = undefined;
  
+        node.subscribeWS = async () => {
+              
+            await node.getToken();
+            node.refreshTokenIntervalReference = setInterval(async () => {
+              node.debug("Refresh Token");
+              await node.getToken();
+            }, node.refreshTokenInterval);
 
-        subscribeWS = (token,timeout) => {
-            node.debug("subscribeWS", token);
-            url =
-            "wss://" +
-            node.C8Y_BASEURL.replace(/(^\w+:|^)\/\//, "") +
-            "/notification2/consumer/?token=" + token;
-            console.log("url: ", url);
+            node.status({
+              fill: "green",
+              shape: "ring",
+              text: "Connecting...",
+            });
+            
+            url =`wss://${node.C8Y_BASEURL.replace(/(^\w+:|^)\/\//, "")}/notification2/consumer/?token=${node.token}`;
             node.socket = new Websocket(url);
-            //console.log("node.socket: ", node.socket);
+            
+            node.socket.clientId = node.clientId;
             node.socket.onopen = function (e) {
-              node.debug("[open] Connection established");
-            };
-
-            node.socket.onmessage = function (event) {
-
-              message = event.data.split('\n');
-              const id = message[0];
-              const source = message[1];
-              const operation = message[2];
-              const payload = message[4];
-              node.debug(`New Notification id: ${id} source: ${source} operation: ${operation} \n payload: ${payload}`);
-              const msg = {
-                payload: {
-                  id: id,
-                  source: source,
-                  operation: operation,
-                  message: JSON.parse(payload)
-                },
+              node.reconnectCount = 0;
+              node.debug("[ws open] Connection established.");
+              node.status({
+                fill: "green",
+                shape: "dot",
+                text: "Connected",
+              });
+              node.heartBeatReference = setInterval(() => {
+                node.socket.ping();
+                node.debug("Ping!");
+              }, node.pingInterval);
+              node.socket.onmessage = function (event) {
+                message = event.data.split("\n");
+                const id = message[0];
+                const source = message[1];
+                const operation = message[2];
+                const payload = message[4];
+                node.debug(
+                  `New Notification id: ${id} source: ${source} operation: ${operation} \n payload: ${payload}`
+                );
+                const msg = {
+                  payload: {
+                    id: id,
+                    source: source,
+                    operation: operation,
+                    message: JSON.parse(payload),
+                  },
+                };
+                node.send(msg);
+                // Ack message
+                node.socket.send(id);
               };
-              node.send(msg);
-              node.socket.send(id);
+
             };
 
             node.socket.onclose = function (event) {
-              if (event.wasClean) {
-                node.debug(
-                  `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`
-                );
-              } else {
-                // e.g. server process killed or network down
-                // event.code is usually 1006 in this case
-                node.debug("[close] Connection died. Reconnecting.");
-              }
+              clearInterval(node.heartBeatReference);
+              node.status({
+                fill: "red",
+                shape: "dot",
+                text: `Disconnected: code=${event.code} reason=${event.reason}`,
+              });
+              node.debug(`[ws close] code=${event.code} reason=${event.reason}`);
               if (event.code !== 1000) {
-                node.debug("Reconnecting!");
-                setTimeout(function () {
-                  connect();
-                }, timeout);
-              } else {
-                node.log("Closing finished");
-              }
+                setTimeout(
+                  function () {
+                    node.debug(`Reconnecting.....${node.reconnectCount}`);
+                    node.reconnectCount = ++node.reconnectCount;
+                    node.subscribeWS();
+                  }, 
+                  node.reconnectTimeout);
+              } 
             };
+
             node.socket.onerror = function (error) {
-              node.error(`[error] ${error}`);
+              node.error(`[error] ${JSON.stringify(error)} ${node.socket.readyState}`);
+
+              node.status({
+                fill: "red",
+                shape: "dot",
+                text: `Error: ${error.code}`,
+              });
             };
         };
 
-        node.getToken = async function (
-          subscriber,
-          subscription,
-          expiresInMinutes
-        ) {
+
+        node.getToken = async function () {
           node.log(
-            `${subscriber} subscribing to ${subscription} on tenant: ${node.C8Y_TENANT} and url: ${node.C8Y_BASEURL}`
+            `Get Token`
           );
-          if (subscriber !== undefined && subscription != undefined) {
+          if (node.subscriber !== undefined && node.subscription != undefined) {
             const fetchOptions = {
               method: "POST",
               body: JSON.stringify({
-                subscription: subscription,
-                subscriber: subscriber,
-                expiresInMinutes: expiresInMinutes,
+                subscription: node.subscription,
+                subscriber: node.subscriber,
+                expiresInMinutes: node.expiresInMinutes,
               }),
               headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json",
               },
             };
-            const c8yres = await node.client.core.fetch(
-              "notification2/token",
-              fetchOptions
-            );
+            let c8yres = undefined;
+            try {
+               c8yres = await node.client.core.fetch(
+                "notification2/token",
+                fetchOptions
+              );
+            } catch (error) {
+                node.error(error);
+                return;
+            }
             if (c8yres.status == 200) {
               try {
                 json = await c8yres.json();
-                return json.token;
+                node.debug("Token received");
+                node.token =  json.token;
+                return;
               } catch (error) {
                 node.error(error);
                 return;
@@ -112,20 +151,23 @@ module.exports = function(RED) {
               node.error(c8yres.status);
               return;
             }
+          } else {
+            node.error("Subscriber, Subscription was undefined");
           }
         };
 
-      
         node.unsubscribeNotification = function () {
           if (node.socket !== undefined) {
-            node.log("Closing")
+            clearInterval(node.heartBeatReference);
+            clearInterval(node.refreshTokenIntervalReference);
+            node.log("Closing ws connection");
             node.socket.close(1000,"Node Deactivated");
             node.socket= undefined;
           }
         }
+
         node.subscribeNotification = async function () {
-         const token = await node.getToken(node.subscriber, node.subscription, 100000);
-         subscribeWS(token,1000);
+          node.subscribeWS();
         }
 
         setNodeState(node, true);
@@ -136,7 +178,7 @@ module.exports = function(RED) {
         });
     }
 
-        // Manage node state
+    // Manage node state
     function setNodeState(node,state) {
         if (state) {
             node.active = true;
@@ -147,9 +189,10 @@ module.exports = function(RED) {
         }
     }
 
+    // Register Node
     RED.nodes.registerType("notification", notificationNode);
 
-    // State
+    // Manage State
     RED.httpAdmin.get(
       "/notification/:id/:cmd",
       RED.auth.needsPermission("notification.write"),
@@ -165,8 +208,7 @@ module.exports = function(RED) {
         var cmd= req.params.cmd;
         var id= req.params.id;
         var node = RED.nodes.getNode(req.params.id);
-        // console.log("/notification/ node.config:" , node.c8yconfig);
-        // console.log("/notification/ node.client:" , node.client);
+
         // Manage Node State
         if (cmd == "enable" || cmd == "disable") {
           if (node !== null && typeof node !== "undefined") {
@@ -212,5 +254,4 @@ module.exports = function(RED) {
         }
       }
     );
-
 }
