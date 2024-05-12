@@ -16,7 +16,6 @@
             externalidType: {
                 value: "str"
             },
-
             externalidtype: {
                 value: "c8y_Serial",
                 required: true,
@@ -25,19 +24,15 @@
             externalidtypeType: {
                 value: "str"
             },
-            
             createdevice: {value: false},
-
             params: {
                 value: "",
                 required: false,
                 validate: function(v){
                     var cd = $('#node-input-createdevice');
                     if (cd.is(':checked')) {
-                        console.log("checked");
                         return RED.validators.typedInput('paramsType')(v);
                     }else{
-                        console.log("not checked");
                         return true;
                     }
                 }

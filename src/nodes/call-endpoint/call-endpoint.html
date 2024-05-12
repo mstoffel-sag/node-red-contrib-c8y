@@ -26,7 +26,14 @@
             body: {
                 value:"",
                 required: true,
-                validate: RED.validators.typedInput('bodyType')
+                validate: function(v){
+                    const method = $('#node-input-method').val();
+                    if (method == "GET" || method == "DELETE") {
+                        return true;
+                    }else{
+                        return RED.validators.typedInput('bodyType')(v);
+                    }
+                }
             },
             bodyType: {
                 value: "json"
@@ -61,6 +68,14 @@
                 default: 'str',
                 typeField: $("#node-input-bodyType"),
                 types: ['msg','json']
+            });
+            $('#node-input-method').change(function() {
+                const method = $(this).val();
+                if ( method == "GET" || method == "DELETE") {
+                    $('#body').hide();
+                } else {
+                    $('#body').show();
+                }
             });
             $('#node-input-endpoint').typedInput({
                 default: 'str',
@@ -101,7 +116,7 @@
         <input type="text" id="node-input-method" placeholder="GET">
         <input type="hidden" id="node-input-methodType">
 	</div>
-    <div class="form-row">
+    <div class="form-row" id="body">
         <label for="node-input-body"><i class="fa fa-tag"></i> Body</label>
         <input type="text" id="node-input-body" placeholder="">
         <input type="hidden" id="node-input-bodyType">
