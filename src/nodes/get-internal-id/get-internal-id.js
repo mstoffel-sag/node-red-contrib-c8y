@@ -7,10 +7,9 @@ module.exports = function(RED) {
         var node = this;
         node.config = config;
         node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
+        getCredentials(RED,node);
         node.on('input', async function(msg) {
           try {
-            getCredentials(RED,node);
-
             // Get properties
             externalIdType = RED.util.evaluateNodeProperty(
               node.config.externalidtype,
@@ -18,25 +17,25 @@ module.exports = function(RED) {
               node,
               msg
               );
-              externalId = RED.util.evaluateNodeProperty(
-                node.config.externalid,
-                node.config.externalidType,
+            externalId = RED.util.evaluateNodeProperty(
+              node.config.externalid,
+              node.config.externalidType,
+              node,
+              msg
+              );
+            if (node.config.createdevice) {
+              params = RED.util.evaluateNodeProperty(
+                node.config.params,
+                node.config.paramsType,
                 node,
                 msg
                 );
-                if (node.config.createdevice) {
-                  params = RED.util.evaluateNodeProperty(
-                    node.config.params,
-                    node.config.paramsType,
-                    node,
-                    msg
-                    );
-                  }
-                  node.log("Config: " + node.C8Y_TENANT + node.C8Y_BASEURL + node.C8Y_PASSWORD + node.C8Y_USER);
-                } catch (error) {
-                  node.error("Extracting Properties " +error);
-                  return;
-                }
+              }
+              node.debug("Config: " + node.C8Y_TENANT + node.C8Y_BASEURL + node.C8Y_PASSWORD + node.C8Y_USER);
+              } catch (error) {
+                node.error("Extracting Properties " +error);
+                return;
+              }
           if (externalId === undefined) {
             node.error( "Error externalId is undefined.");
             return;
@@ -61,10 +60,12 @@ module.exports = function(RED) {
           msg.status = res.status;
           delete msg.body;
           delete msg.headers;
+
           if (msg.status == 200) {
             try {
               json = await res.json();
               msg.payload = json.managedObject.id;
+              node.debug(`Sending Message: ${JSON.stringify(msg)}`);
               node.send(msg);
             } catch (error) {
               node.error(error);
@@ -92,7 +93,7 @@ module.exports = function(RED) {
                   externalId,
                   externalIdType
                 );
-                node.log("Internal Id: " + msg.payload);
+                node.debug("Internal Id: " + msg.payload);
                 if (typeof msg.payload != "error") {
                   node.send(msg);
                   return;
@@ -104,6 +105,8 @@ module.exports = function(RED) {
               node.error("Get InternalId Response: " + res.status + " " + res.statusText);
               return;
               }
+            }else{
+              node.error(res.statusText + " " + res.status);
             }
           }
       });
