@@ -9,24 +9,29 @@ module.exports = function(RED) {
       var node = this;
       node.config = config;
       node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
+      getCredentials(RED, node);
       node.on("input", function (msg) {
              try {
-               getCredentials(RED, node);
                // Get properties
-               body = RED.util.evaluateNodeProperty(
-                 node.config.body,
-                 node.config.bodyType,
-                 node,
-                 msg
-               );
                method = RED.util.evaluateNodeProperty(
                  node.config.method,
                  node.config.methodType,
                  node,
                  msg
-               );
+                 );
+                 node.debug("method:" +method );
                // please no body for GET
-               body = method ==="GET" ? undefined : body;
+              if (method =="GET" || method =="DELETE" ) {
+                 body = undefined;
+              }else{
+                 body = RED.util.evaluateNodeProperty(
+                   node.config.body,
+                   node.config.bodyType,
+                   node,
+                   msg
+                 );
+               }
+               node.debug( " body: " + body);
                endpoint = RED.util.evaluateNodeProperty(
                  node.config.endpoint,
                  node.config.endpointType,
@@ -47,7 +52,7 @@ module.exports = function(RED) {
              }
         const fetchOptions = {
           method: method,
-          body: JSON.stringify(body) || undefined,
+          body: (method =="DELETE" || method=="GET") ? undefined :  JSON.stringify(body) ,
           headers: msg.headers || {
             "Content-Type": "application/json",
             Accept: "application/json",
@@ -58,19 +63,24 @@ module.exports = function(RED) {
           .fetch(endpoint, fetchOptions)
           .then(
             (res) => {
+              console.log("Res:" , res)
               msg.status = res.status;
               delete msg.body;
               delete msg.headers;
-              return res.json().then(
-                (json) => {
-                  node.debug("res:" + json);
-                  msg.payload = json;
-                  node.send(msg);
-                },
-                (error) => {
-                  node.error(error);
-                }
-              );
+
+              if (res.status !== 204) {
+                return res.json().then(
+                  (json) => {
+                    node.debug("res:" + json);
+                    msg.payload = json;
+                    node.send(msg);
+                  },
+                  (error) => {
+                    node.error(error);
+                  }
+                );
+              }
+              node.send(msg);
             },
             (error) => {
               node.error(error);

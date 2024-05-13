@@ -25,10 +25,21 @@
             },
             body: {
                 value:"",
-                required: true,
                 validate: function(v){
                     const method = $('#node-input-method').val();
-                    if (method == "GET" || method == "DELETE") {
+                    const methodType = $('#node-input-methodType').val();
+                    const bodyType = $('#node-input-bodyType').val();
+                    if (
+                            (
+                                method == "GET" || 
+                                method == "DELETE" 
+                            )
+                            || 
+                            (
+                                methodType =="msg" && 
+                                bodyType =="msg"
+                            ) 
+                        ) {
                         return true;
                     }else{
                         return RED.validators.typedInput('bodyType')(v);
@@ -123,6 +134,21 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="call-endpoint">
-    <p>A node that calls a specified Cumulocity endpoint.</p>
+<script type="text/markdown" data-help-name="call-endpoint">
+A node that calls a specified Cumulocity endpoint. For detailed information on the Cumulocity API please have a look at: [https://cumulocity.com/api/core/](https://cumulocity.com/api/core/)
+Also have a look at the example flows distributed with this package.
+
+The node needs Cumulocity conection details (Tenant/Base URL) 
+and credentials (Username and Password).
+Those can be obtained via a configuration (C8y Config Property) or through environment variables.
+Using evironment variables comes in handy if your running inside Cumulocity as a microservice. To use them check the Use ENV checkbox. 
+
+
+### Inputs
+: Endpoint (string | msg field) : API Endpoint to call (e.g. /measurement/measurements) can be build using a function bock beforhand.
+: Method (string dropdown | msg field ) : Http method. Use the dropdown to select or prepare as a message field 
+: Body (JSON string | msg field) : Http body for POST or PUT method. Can be hard coded as JSON string or prepared as message field
+
+### outputs
+: payload (JSON string) : The request response will be issued by the node as `msg.payload`
 </script>
