@@ -78,8 +78,18 @@ module.exports = function(RED) {
         if (state) {
             node.active = true;
             node.subscriberealtime();
-        } else {
+            node.status({
+              fill: "green",
+              shape: "dot",
+              text: `Connected`,
+            });
+          } else {
             node.active = false;
+            node.status({
+              fill: "red",
+              shape: "dot",
+              text: `Disconnected`,
+            });
             node.unsubscriberealtime();
         }
     }

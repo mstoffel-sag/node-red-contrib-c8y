@@ -11,10 +11,6 @@ module.exports = function(RED) {
 
       node.subscriber = node.config.subscriber;
       node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
-      node.active =
-        config.active === null ||
-        typeof config.active === "undefined" ||
-        config.active;
       node.socket = undefined;
       node.clientId = "nodeRed" + uuid.v4().replace(/-/g, "");
       node.reconnectTimeout = 10000;
@@ -26,26 +22,7 @@ module.exports = function(RED) {
       node.refreshTokenInterval = (node.expiresInMinutes - 1) * 1000 * 60;
       node.token = undefined;
       getCredentials(RED, node);
-          node.subscription = RED.util.evaluateNodeProperty(
-            node.config.subscription,
-            node.config.subscriptionType,
-            node,
-            undefined
-          );
-      // node.on('input', function(msg) {
-      //   try {
-      //     node.subscription = RED.util.evaluateNodeProperty(
-      //       node.config.subscription,
-      //       node.config.subscriptionType,
-      //       node,
-      //       msg
-      //     );
-      //   }catch(e){
-      //     node.error(e);
-      //     return;
-      //   }
-      // });
-      // }
+      
       node.subscribeWS = async () => {
         await node.getToken();
         node.refreshTokenIntervalReference = setInterval(async () => {
@@ -126,7 +103,7 @@ module.exports = function(RED) {
 
         node.socket.onerror = function (error) {
           node.error(
-            `[error] ${JSON.stringify(error)} ${node.socket.readyState}`
+            `[error] ${JSON.stringify(error)} ${node.socket.readyState !== undefined ? node.socket.readyState : ""}`
           );
 
           node.status({
@@ -138,7 +115,7 @@ module.exports = function(RED) {
       };
 
       node.getToken = async function () {
-        node.log(
+        node.debug(
           `Get Token: Subscription: ${node.subscription}  Subscriber: ${node.subscriber}`
         );
         if (node.subscriber !== undefined && node.subscription != undefined) {
@@ -197,7 +174,7 @@ module.exports = function(RED) {
         node.subscribeWS();
       };
 
-      setNodeState(node, true);
+      setNodeState(node, node.config.active);
 
       node.on("close", function () {
         node.debug("Npde CLOSE");
@@ -208,10 +185,36 @@ module.exports = function(RED) {
     // Manage node state
     function setNodeState(node,state) {
         if (state) {
-            node.active = true;
-            node.subscribeNotification();
+            
+            node.subscription = RED.util.evaluateNodeProperty(
+              node.config.subscription,
+              node.config.subscriptionType,
+              node,
+              undefined
+            );
+
+            node.log(
+              "Activating Subscription: " +
+                node.subscription +
+              " Subscriber: " + node.subscriber
+            );
+
+            if (
+              (node.subscription !== undefined ) &&
+              (node.subscription !== null ) &&
+              (node.subscription !== "") &&
+              (node.subscriber !== undefined) &&
+              (node.subscriber !== null) &&
+              (node.subscriber !== "") 
+            ){
+              node.subscribeNotification();
+              node.config.active = true;
+            }else{
+              node.error("Missing config. Subscriber or Subscription not configured.")
+              node.config.active = false;
+            }
         } else {
-            node.active = false;
+            node.config.active = false;
             node.unsubscribeNotification();
         }
     }
@@ -235,7 +238,7 @@ module.exports = function(RED) {
         var cmd= req.params.cmd;
         var id= req.params.id;
         var node = RED.nodes.getNode(req.params.id);
-
+        node.debug("Current Node State:" + node.config.active + " Command: " +cmd );
         // Manage Node State
         if (cmd == "enable" || cmd == "disable") {
           if (node !== null && typeof node !== "undefined") {
@@ -247,6 +250,7 @@ module.exports = function(RED) {
 
           //
         } else if (cmd == "getSubscriptions" && node!==undefined && node!==null && node.c8yconfig !==undefined && node.client !== undefined) {
+          
           const fetchOptions = {
             method: "GET",
             body: undefined,
