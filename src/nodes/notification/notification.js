@@ -14,7 +14,7 @@ module.exports = function(RED) {
       node.socket = undefined;
       node.clientId = "nodeRed" + uuid.v4().replace(/-/g, "");
       node.reconnectTimeout = 10000;
-      node.pingInterval = 50000;
+      node.pingInterval = 180000;
       node.heartBeatReference = undefined;
       node.refreshTokenIntervalReference = undefined;
       node.reconnectCount = 0;
@@ -199,14 +199,7 @@ module.exports = function(RED) {
               " Subscriber: " + node.subscriber
             );
 
-            if (
-              (node.subscription !== undefined ) &&
-              (node.subscription !== null ) &&
-              (node.subscription !== "") &&
-              (node.subscriber !== undefined) &&
-              (node.subscriber !== null) &&
-              (node.subscriber !== "") 
-            ){
+            if (node.subscriber && node.subscription && node.subscription !=="nosub"){
               node.subscribeNotification();
               node.config.active = true;
             }else{
@@ -227,18 +220,23 @@ module.exports = function(RED) {
       "/notification/:id/:cmd",
       RED.auth.needsPermission("notification.write"),
       async function (req, res) {
-        console.log(
-          "id: " + req.params.id + " cmd: " + req.params.cmd
-        );
-        if (req.params.cmd == undefined || req.params.id == undefined) {
+        const cmd= req.params.cmd;
+        const id= req.params.id;
+        console.log(`/notification/${id}/${cmd}`);
+        if ( !id || !cmd) {
+          console.log(`/notification id or cmd undefined`);
           res.sendStatus(404);
           return;
         }
 
-        var cmd= req.params.cmd;
-        var id= req.params.id;
-        var node = RED.nodes.getNode(req.params.id);
-        node.debug("Current Node State:" + node.config.active + " Command: " +cmd );
+        const node = RED.nodes.getNode(id);
+        if (node) {
+          node.debug(`Current Node State  ${node.config.active}  Command:  ${cmd}` );
+        }else{
+          console.error("Node not found");
+          res.sendStatus(404);
+          return;
+        }
         // Manage Node State
         if (cmd == "enable" || cmd == "disable") {
           if (node !== null && typeof node !== "undefined") {
@@ -246,11 +244,14 @@ module.exports = function(RED) {
             res.sendStatus(cmd === "enable" ? 200 : 201);
           } else {
             res.sendStatus(404);
+            return;
           }
 
           //
-        } else if (cmd == "getSubscriptions" && node!==undefined && node!==null && node.c8yconfig !==undefined && node.client !== undefined) {
-          
+        } else if (cmd == "getSubscriptions" && node &&  node.c8yconfig ) {
+          if (!node.client) {
+            getCredentials()
+          }
           const fetchOptions = {
             method: "GET",
             body: undefined,
