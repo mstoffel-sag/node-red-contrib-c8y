@@ -16,6 +16,10 @@
             externalidType: {
                 value: "str"
             },
+            output: {
+                value:"payload",
+                required: true,
+            },
             externalidtype: {
                 value: "c8y_Serial",
                 required: true,
@@ -117,6 +121,20 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="get-internal-id">
-    <p>A node to get the internal id by by providing external-id and external-id-type.</p>
+<script type="text/markdown" data-help-name="get-internal-id">
+A node to get the internal cumulocity device id by by providing external-id and external-id-type of the identity API.
+
+The node needs Cumulocity conection details (Tenant/Base URL) 
+and credentials (Username and Password).
+Those can be obtained via a configuration (C8y Config Property) or through environment variables.
+Using evironment variables comes in handy if your running inside Cumulocity as a microservice. To use them check the Use ENV checkbox. 
+
+
+### Inputs
+: Externel Id (string | msg field) :  External Id of the device.
+: Externel Id Type (string | msg field ) : External Id Type of the device
+: Create Device (checkbox) : If checked a new device will be created using the provided Id and Type. Metadata can be provided using params.
+: Params (JSON String | msg field) : If create device is checked provide metadata as JSON fragment 
+### outputs
+: payload (JSON string) : The request response will be issued by the node as `msg.payload`
 </script>
