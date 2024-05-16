@@ -30,7 +30,7 @@
         icon: "file.png",
         outputs:1,
         label: function() {
-            return this.name ||"notification-" + this.subscriber;
+            return this.name ||"notification-" + this.subscription;
         },
         oneditprepare: function () {
 
@@ -112,21 +112,21 @@
                 }
                 
         },
-        button: {
-            toggle: "active",
-            onclick: function() {
-                var node = this;
-                $.ajax({
-                    url: 'notification/' + node.id +'/'+(node.active?"enable":"disable"),
-                    cache: false,
-                    dataType: 'json',
-                    method: 'GET',
-                    success: function (data) {
-                        console.log("Success: " + JSON.stringify(data));
-                    }
-		        });
-            }
-        }
+        // button: {
+        //     toggle: "active",
+        //     onclick: function() {
+        //         var node = this;
+        //         $.ajax({
+        //             url: 'notification/' + node.id +'/'+(node.active?"enable":"disable"),
+        //             cache: false,
+        //             dataType: 'json',
+        //             method: 'GET',
+        //             success: function (data) {
+        //                 console.log("Success: " + JSON.stringify(data));
+        //             }
+		//         });
+        //     }
+        // }
     });
 </script>
 
@@ -156,6 +156,25 @@
     </div>
 </script>
 
-<script type="text/html" data-help-name="notification">
-    <p>A node that creates a subscriber for Notification 2.0 Cumulocity and consumes events.</p>
+<script type="text/markdown" data-help-name="notification">
+A node to subscribe to Cumulocity Notification 2.0 API.
+
+The node needs Cumulocity conection details (Tenant/Base URL) 
+and credentials (Username and Password).
+Those can be obtained via a configuration (C8y Config Property) or through environment variables.
+Using evironment variables comes in handy if your running inside Cumulocity as a microservice. To use them check the Use ENV checkbox. 
+
+### Inputs
+: Name (string) :  If not set notification-${subscription}.
+: Subscription (string Dropdown| string ) : Existing Notification 2.0 Subscription
+: Subscriber (string) : Arbitrary Subscriber Name.
+
+### outputs
+: payload (JSON string) : Received Notification 2.0 Message `msg.payload`
+
+### 🔥Configuration🔥
+To get and select subscriptions a two step approach is necessarry.
+At first configure the Cumulocity connection (C8y Config) then deploy the flow.
+Open the node again and select a subscription. Choose a subscriber name and deploy again.
+Now you should get new notifications. 
 </script>
