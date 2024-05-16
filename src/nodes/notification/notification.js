@@ -3,13 +3,15 @@ const {getCredentials} = require("../c8y-utils/c8y-utils");
 const Websocket = require("ws");
 const uuid = require("uuid");
 
+
+
 module.exports = function(RED) {
     function notificationNode(config) {
       RED.nodes.createNode(this, config);
       var node = this;
       node.config = config;
-
       node.subscriber = node.config.subscriber;
+      node.subscription = node.config.subscription;
       node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
       node.socket = undefined;
       node.clientId = "nodeRed" + uuid.v4().replace(/-/g, "");
@@ -21,8 +23,75 @@ module.exports = function(RED) {
       node.expiresInMinutes = 10;
       node.refreshTokenInterval = (node.expiresInMinutes - 1) * 1000 * 60;
       node.token = undefined;
+
+
       getCredentials(RED, node);
+      console.log()
+      try {
+        // Get properties
+        node.deviceIds = RED.util.evaluateNodeProperty(
+          node.config.deviceIds,
+          node.config.deviceIdsType,
+          node,
+          undefined
+          );
+          node.debug("DeviceIds:" + JSON.stringify(node.deviceIds) );
+        node.filter = RED.util.evaluateNodeProperty(
+          node.config.filter,
+          node.config.filterType,
+          node,
+          undefined
+          );
+          node.debug("Filter:" +JSON.stringify(node.filter ));
+      } catch (error) {
+        console.log("Error", error);
+        node.error(error);
+        return;
+      }
+
+
       
+      node.createFilter = async function (){
+         if (node.subscription && node.deviceIds && node.filter) {
+          for (let index = 0; index < node.deviceIds.devices.length; index++) {
+            const localFilter= {...node.filter};
+            localFilter.source = {};
+            localFilter.source.id = node.deviceIds.devices[index]; 
+            localFilter.subscription = node.subscription;
+            node.log("Filter: " + JSON.stringify(localFilter));
+
+            const fetchOptions = {
+              method: "POST",
+              body: JSON.stringify(localFilter),
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              }
+            };
+
+            let c8yres = undefined;
+            try {
+              c8yres = await node.client.core.fetch(
+                "notification2/subscriptions/",
+                fetchOptions
+              );
+            } catch (error) {
+              node.error(error);
+              return;
+            }
+            if (c8yres.status == 201) {
+                node.log("Filter created");
+            } else {
+              node.error("Creating filter. " + c8yres.status + " " +c8yres.statusText + " Filter: " +JSON.stringify(localFilter)) ;
+            }
+          }
+        } else {
+          node.error("Subscriber, Subscription or filter was undefined");
+        }
+
+      }
+
+
       node.subscribeWS = async () => {
         await node.getToken();
         node.refreshTokenIntervalReference = setInterval(async () => {
@@ -171,10 +240,11 @@ module.exports = function(RED) {
       };
 
       node.subscribeNotification = async function () {
+        node.createFilter();
         node.subscribeWS();
       };
 
-      setNodeState(node, node.config.active);
+      setNodeState(node,true);
 
       node.on("close", function () {
         node.debug("Npde CLOSE");
@@ -185,29 +255,18 @@ module.exports = function(RED) {
     // Manage node state
     function setNodeState(node,state) {
         if (state) {
-            
-            node.subscription = RED.util.evaluateNodeProperty(
-              node.config.subscription,
-              node.config.subscriptionType,
-              node,
-              undefined
-            );
-
             node.log(
               "Activating Subscription: " +
                 node.subscription +
               " Subscriber: " + node.subscriber
             );
 
-            if (node.subscriber && node.subscription && node.subscription !=="nosub"){
+            if (node.subscriber && node.subscription ){
               node.subscribeNotification();
-              node.config.active = true;
             }else{
               node.error("Missing config. Subscriber or Subscription not configured.")
-              node.config.active = false;
             }
         } else {
-            node.config.active = false;
             node.unsubscribeNotification();
         }
     }
