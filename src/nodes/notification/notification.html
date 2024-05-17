@@ -12,55 +12,69 @@
             subscriber: {value:"", required: true},
             filter: {value:"", required: true},
             filterType: {value: "json"},
-            deviceIds: {value: "", required:true},
-            deviceIdsType: {value: "json"},
+            deviceIds: {
+                value:"", required: true,
+                validate: RED.validators.typedInput('deviceIdsType')},
+            deviceIdsType: {value: "Select"},
         },
         inputs: 0,
         icon: "file.png",
         outputs:1,
         label: function() {
-            return this.name ;
+            return this.name ||"notification-" + this.subscription;
         },
         oneditprepare: function () {
-            $('#node-input-deviceIds').typedInput({
-                default: 'json',
-                typeField: $("#node-input-deviceIdsType"),
-                types: ['json']
-            });
+          console.log("node.deviceIds: " , this.deviceIds);
             $('#node-input-filter').typedInput({
                 default: 'json',
                 typeField: $("#node-input-filterType"),
                 types: ['json']
             });
-                // var node = this;
-                // if (node.c8yconfig ) {
-                //     $.ajax({
-                //         url: 'notification/' + node.id +'/getSubscriptions',
-                //         cache: false,
-                //         dataType: 'json',
-                //         method: 'GET',
-                //         success: function (data) {
-                //             var subarray = [];
-                //             data.subscriptions.forEach((sub) => {
-                //                 try {
-                //                     subarray.push({
-                //                         value: sub.subscription,
-                //                         label: sub.subscription,
-                //                     });
-                //                 } catch (error) {
-                //                     console.log("error getting subarray.push");
-                //                 }
-                //             });
-                //             getSubscriptions(subarray);
-                          
-                //         },
-                //         error: function (error) { 
-                //             console.log("Error: " , error);
-                //         }
-		        //     });
-                // }else{
-                //     console.debug("No config found. Skipping.");
-                // }
+                var node = this;
+                function getDevices(devs) {
+                    let options= [];
+                    options.includes()
+                    devs.forEach(element => {
+                        if (node.deviceIds.includes(element.value)) {
+                            console.log("is selected addin"+ element.value);
+                            element.selected = true
+                            
+                        }
+                    });
+                    console.log("Devices", devs);
+                    $('#node-input-deviceIds').typedInput({
+                    default: 'Select',
+                    typeField: $("#node-input-deviceIdsType"),
+                    types: [
+                        'json',
+                        {
+                            value: "Select",
+                            label: "Select Device",
+                            title: "Devices",
+                            multiple: true,
+                            options: devs,
+                            showLabel: true
+                        }
+                    ]
+                    });
+                }
+                if (node.c8yconfig ) {
+                    $.ajax({
+                        url: 'notification/' + node.id +'/getDevices',
+                        cache: false,
+                        dataType: 'json',
+                        method: 'GET',
+                        success: function (data) {
+                            console.log("Devices:"  ,data);
+                            getDevices(data);
+                        },
+                        error: function (error) { 
+                            console.log("Error: " , error);
+                        }
+		            });
+                }else{
+                    console.debug("No config found. Skipping.");
+                }
                 
         },
     });
