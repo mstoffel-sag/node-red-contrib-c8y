@@ -1,4 +1,4 @@
-const c8yClientLib = require('@c8y/client');
+const {c8yClientLib, InventoryService} = require('@c8y/client');
 const {getCredentials} = require("../c8y-utils/c8y-utils");
 const Websocket = require("ws");
 const uuid = require("uuid");
@@ -12,6 +12,7 @@ module.exports = function(RED) {
       node.config = config;
       node.subscriber = node.config.subscriber;
       node.subscription = node.config.subscription;
+      node.nonPersistent = node.config.nonPersistent;
       node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
       node.socket = undefined;
       node.clientId = "nodeRed" + uuid.v4().replace(/-/g, "");
@@ -35,14 +36,23 @@ module.exports = function(RED) {
           node,
           undefined
           );
+          node.deviceIds = node.deviceIds.split(",");
           node.debug("DeviceIds:" + JSON.stringify(node.deviceIds) );
-        node.filter = RED.util.evaluateNodeProperty(
-          node.config.filter,
-          node.config.filterType,
+        node.apis = RED.util.evaluateNodeProperty(
+          node.config.apis,
+          node.config.apisType,
           node,
           undefined
           );
-          node.debug("Filter:" +JSON.stringify(node.filter ));
+          node.debug("APIs:" +JSON.stringify(node.apis ));
+        node.context = RED.util.evaluateNodeProperty(
+          node.config.context,
+          node.config.contextType,
+          node,
+          undefined
+        );
+          node.debug("Context:" +JSON.stringify(node.context ));
+
       } catch (error) {
         console.log("Error", error);
         node.error(error);
@@ -52,42 +62,72 @@ module.exports = function(RED) {
 
       
       node.createFilter = async function (){
-         if (node.subscription && node.deviceIds && node.filter) {
-          for (let index = 0; index < node.deviceIds.devices.length; index++) {
-            const localFilter= {...node.filter};
-            localFilter.source = {};
-            localFilter.source.id = node.deviceIds.devices[index]; 
-            localFilter.subscription = node.subscription;
-            node.log("Filter: " + JSON.stringify(localFilter));
-
-            const fetchOptions = {
-              method: "POST",
-              body: JSON.stringify(localFilter),
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
+          let filter = {
+            nonPersistent: node.nonPersistent,
+            context: node.context,
+            subscriptionFilter: {
+              apis: node.apis.split(",")
+            }
+          };
+          node.log("Filter created: " +JSON.stringify(filter));
+          node.log("DeviceIds: " +JSON.stringify(node.deviceIds));
+          if (node.context == "tenant") {
+            // No device source allowed in tenant context
+            node.debug("Remove deviceIds since tenant context");
+            node.deviceIds = [""];
+          }
+          node.log("DeviceIds: " +JSON.stringify(node.deviceIds));
+         if (node.subscription && node.deviceIds) {
+          for (let index = 0; index < node.deviceIds.length; index++) {
+              const localFilter = { ...filter };
+              if (!isNaN( parseInt(node.deviceIds[index]))) {
+                localFilter.source = {};
+                localFilter.source.id = node.deviceIds[index];
               }
-            };
+              localFilter.subscription = node.subscription;
+              node.log("Filter: " + JSON.stringify(localFilter));
+              node.callCreateFilter(localFilter);
 
-            let c8yres = undefined;
-            try {
-              c8yres = await node.client.core.fetch(
-                "notification2/subscriptions/",
-                fetchOptions
-              );
-            } catch (error) {
-              node.error(error);
-              return;
-            }
-            if (c8yres.status == 201) {
-                node.log("Filter created");
-            } else {
-              node.error("Creating filter. " + c8yres.status + " " +c8yres.statusText + " Filter: " +JSON.stringify(localFilter)) ;
-            }
           }
         } else {
           node.error("Subscriber, Subscription or filter was undefined");
         }
+
+      }
+
+
+      node.callCreateFilter = async function (filter){
+                const fetchOptions = {
+                  method: "POST",
+                  body: JSON.stringify(filter),
+                  headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                  },
+                };
+
+              let c8yres = undefined;
+              try {
+                c8yres = await node.client.core.fetch(
+                  "notification2/subscriptions/",
+                  fetchOptions
+                );
+              } catch (error) {
+                node.error(error);
+                return;
+              }
+            if (c8yres.status == 201) {
+                node.log("Filter created");
+            } else {
+              node.error(
+                "Creating filter. " +
+                  c8yres.status +
+                  " " +
+                  c8yres.statusText +
+                  " Filter: " +
+                  JSON.stringify(filter)
+              );
+            }
 
       }
 
@@ -307,39 +347,26 @@ module.exports = function(RED) {
           }
 
           //
-        } else if (cmd == "getSubscriptions" && node &&  node.c8yconfig ) {
-          if (!node.client) {
-            getCredentials()
-          }
-          const fetchOptions = {
-            method: "GET",
-            body: undefined,
-            headers:  {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-          };
-          //Get subscriptions from external
-          if (node.client == undefined) {
-            res.sendStatus(404);
-            return;
-          }
-          const c8yres = await node.client.core.fetch(
-            "/notification2/subscriptions",
-            fetchOptions
-          );
-          if (c8yres.status == 200) {
+        } else if (cmd == "getDevices" && node &&  node.c8yconfig ) {
             try {
-              json = await c8yres.json();
-              res.json(json);
-              //res.sendStatus(c8yres.status);
-              return;
+              const filter = {
+                fragmentType: "c8y_IsDevice",
+                pageSize: 1000,
+                withTotalPages: true,
+              };
+              const { data, paging } = await node.client.inventory.list(
+                filter
+              );
+              // If there are more pages, fetch them as well
+              let extract  =(item) => {
+                return {label: item.name, value: item.id};
+              }
+              res.json(data.map(extract));
+             // console.log("Devices:" ,devices);
             } catch (error) {
-              node.error(error);
-              res.sendStatus(res.status);
-              return;
+              console.error("Error fetching devices:", error);
+              throw error;
             }
-          }
         } else {
           res.sendStatus(404);
         }

@@ -10,7 +10,11 @@
             useenv: {value: false},
             subscription: {value:"", required: true},
             subscriber: {value:"", required: true},
-            filter: {value:"", required: true},
+            context: {value:"mo", required: true},
+            contextType: {value:"Select", required: true},
+            apis: {value:"", required: true},
+            apisType: {value:"Select", required: true},
+            nonPersistent: {value:false, required: true},
             filterType: {value: "json"},
             deviceIds: {
                 value:"", required: true,
@@ -32,6 +36,48 @@
             });
                 var node = this;
                 function getDevices(devs) {
+                    $('#node-input-context').typedInput({
+                        default: 'Select',
+                        typeField: $("#node-input-contextType"),
+                        types: [
+                            'str',
+                            {
+                                value: "Select",
+                                label: "Select Context",
+                                title: "Context",
+                                multiple: false,
+                                options: [
+                                    {value: "mo", label: "ManagedObjects"},
+                                    {value: "tenant", label: "Tenant"}
+                                ],
+                                showLabel: true
+                            }
+                        ]
+                    });
+                    $('#node-input-apis').typedInput({
+                        default: 'Select',
+                        typeField: $("#node-input-apisType"),
+                        types: [
+                            'str',
+                            {
+                                value: "Select",
+                                label: "Select APIs",
+                                title: "APIs",
+                                multiple: true,
+                                options: [
+                                    {value: "*", label: "All APIs"},
+                                    {value: "alarms", label: "Alarms"},
+                                    {value: "alarmsWithChildren", label: "AlarmsWithChildren"},
+                                    {value: "events", label: "EventsWithChildren"},
+                                    {value: "measurements", label: "Measurements"},
+                                    {value: "managedobjects", label: "Managedobjects"}
+                                ],
+                                showLabel: true
+                            }
+                        ]
+                    });
+
+                    // Device Selection from backend
                     let options= [];
                     options.includes()
                     devs.forEach(element => {
@@ -104,9 +150,18 @@
         <input type="text" id="node-input-subscriber" placeholder="subscriber">
     </div>
     <div class="form-row">
-        <label for="node-input-filter"><i class="fa fa-tag"></i> Filter</label>
-        <input type="text" id="node-input-filter" placeholder="">
-        <input type="hidden" id="node-input-filterType">
+        <label for="node-input-nonPersistent"><i class="fa fa-tag"></i> nonPersistent</label>
+        <input type="checkbox" id="node-input-nonPersistent"/>
+    </div>
+    <div class="form-row">
+        <label for="node-input-context"><i class="fa fa-tag"></i> Context</label>
+        <input type="text" id="node-input-context" placeholder="">
+        <input type="hidden" id="node-input-contextType">
+    </div>
+    <div class="form-row">
+        <label for="node-input-apis"><i class="fa fa-tag"></i> APIs</label>
+        <input type="text" id="node-input-apis" placeholder="">
+        <input type="hidden" id="node-input-apisType">
     </div>
     <div class="form-row">
         <label for="node-input-deviceIds"><i class="fa fa-tag"></i> Devices</label>
