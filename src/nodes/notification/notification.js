@@ -10,10 +10,12 @@ module.exports = function(RED) {
       RED.nodes.createNode(this, config);
       var node = this;
       node.config = config;
+      node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
       node.subscriber = node.config.subscriber;
       node.subscription = node.config.subscription;
       node.nonPersistent = node.config.nonPersistent;
-      node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
+      node.typeFilter = node.config.typeFilter;
+      node.fragmentsToCopy = node.config.fragmentsToCopy;
       node.socket = undefined;
       node.clientId = "nodeRed" + uuid.v4().replace(/-/g, "");
       node.reconnectTimeout = 10000;
@@ -59,8 +61,6 @@ module.exports = function(RED) {
         return;
       }
 
-
-      
       node.createFilter = async function (){
           let filter = {
             nonPersistent: node.nonPersistent,
@@ -69,8 +69,17 @@ module.exports = function(RED) {
               apis: node.apis.split(",")
             }
           };
-          node.log("Filter created: " +JSON.stringify(filter));
-          node.log("DeviceIds: " +JSON.stringify(node.deviceIds));
+          console.log(
+            `typefilter: ${node.typeFilter}  fragmentsToCopy: ${node.fragmentsToCopy}`
+          );
+          if (node.typeFilter) {
+            console.log("adding typefilter");
+            filter.typeFilter = node.typeFilter;
+          }
+          if (node.fragmentsToCopy) {
+            filter.fragmentsToCopy= node.fragmentsToCopy.split(",");
+          }
+          console.log("Filter:", filter);
           if (node.context == "tenant") {
             // No device source allowed in tenant context
             node.debug("Remove deviceIds since tenant context");
@@ -88,7 +97,7 @@ module.exports = function(RED) {
               node.log("Filter: " + JSON.stringify(localFilter));
               node.callCreateFilter(localFilter);
 
-          }
+            }
         } else {
           node.error("Subscriber, Subscription or filter was undefined");
         }
