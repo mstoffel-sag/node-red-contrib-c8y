@@ -38,7 +38,7 @@ module.exports = function(RED) {
           node,
           undefined
           );
-          node.deviceIds = node.deviceIds.split(",");
+          node.deviceIds = node.deviceIds.split(",").filter((s) => s.trim());
           node.debug("DeviceIds:" + JSON.stringify(node.deviceIds) );
         node.apis = RED.util.evaluateNodeProperty(
           node.config.apis,
@@ -46,6 +46,10 @@ module.exports = function(RED) {
           node,
           undefined
           );
+          node.apis = node.apis.split(",").filter(s => s.trim());
+          if (node.apis.includes("*")) {
+            node.apis = ["*"]
+          }
           node.debug("APIs:" +JSON.stringify(node.apis ));
         node.context = RED.util.evaluateNodeProperty(
           node.config.context,
@@ -56,7 +60,6 @@ module.exports = function(RED) {
           node.debug("Context:" +JSON.stringify(node.context ));
 
       } catch (error) {
-        console.log("Error", error);
         node.error(error);
         return;
       }
@@ -66,18 +69,16 @@ module.exports = function(RED) {
             nonPersistent: node.nonPersistent,
             context: node.context,
             subscriptionFilter: {
-              apis: node.apis.split(",")
+              apis: node.apis
             }
           };
-          console.log(
-            `typefilter: ${node.typeFilter}  fragmentsToCopy: ${node.fragmentsToCopy}`
-          );
           if (node.typeFilter) {
-            console.log("adding typefilter");
             filter.typeFilter = node.typeFilter;
           }
           if (node.fragmentsToCopy) {
-            filter.fragmentsToCopy= node.fragmentsToCopy.split(",");
+            filter.fragmentsToCopy = node.fragmentsToCopy
+              .split(",")
+              .filter((s) => s.trim());
           }
           console.log("Filter:", filter);
           if (node.context == "tenant") {
@@ -85,27 +86,23 @@ module.exports = function(RED) {
             node.debug("Remove deviceIds since tenant context");
             node.deviceIds = [""];
           }
-          node.log("DeviceIds: " +JSON.stringify(node.deviceIds));
-         if (node.subscription && node.deviceIds) {
-          for (let index = 0; index < node.deviceIds.length; index++) {
-              const localFilter = { ...filter };
-              if (!isNaN( parseInt(node.deviceIds[index]))) {
-                localFilter.source = {};
-                localFilter.source.id = node.deviceIds[index];
+          if (node.subscription && node.deviceIds) {
+            for (let index = 0; index < node.deviceIds.length; index++) {
+                const localFilter = { ...filter };
+                if (!isNaN( parseInt(node.deviceIds[index]))) {
+                  localFilter.source = {};
+                  localFilter.source.id = node.deviceIds[index];
+                }
+                localFilter.subscription = node.subscription;
+                node.log("Filter: " + JSON.stringify(localFilter));
+                node.postFilter(localFilter);
               }
-              localFilter.subscription = node.subscription;
-              node.log("Filter: " + JSON.stringify(localFilter));
-              node.callCreateFilter(localFilter);
-
-            }
         } else {
           node.error("Subscriber, Subscription or filter was undefined");
         }
-
       }
 
-
-      node.callCreateFilter = async function (filter){
+      node.postFilter = async function (filter){
                 const fetchOptions = {
                   method: "POST",
                   body: JSON.stringify(filter),
@@ -139,7 +136,6 @@ module.exports = function(RED) {
             }
 
       }
-
 
       node.subscribeWS = async () => {
         await node.getToken();
@@ -221,7 +217,7 @@ module.exports = function(RED) {
 
         node.socket.onerror = function (error) {
           node.error(
-            `[error] ${JSON.stringify(error)} ${node.socket.readyState !== undefined ? node.socket.readyState : ""}`
+            `[ws error] ${JSON.stringify(error)} ${node.socket.readyState !== undefined ? node.socket.readyState : ""}`
           );
 
           node.status({
@@ -278,6 +274,13 @@ module.exports = function(RED) {
         }
       };
 
+      node.on("close", (done) => {
+        console.debug("On Close: " ,done);
+        
+        setNodeState(node, false);
+        done();
+      });
+
       node.unsubscribeNotification = function () {
         if (node.socket !== undefined) {
           clearInterval(node.heartBeatReference);
@@ -293,12 +296,8 @@ module.exports = function(RED) {
         node.subscribeWS();
       };
 
+      // start node
       setNodeState(node,true);
-
-      node.on("close", function () {
-        node.debug("Npde CLOSE");
-        node.unsubscribeNotification();
-      });
     }
 
     // Manage node state

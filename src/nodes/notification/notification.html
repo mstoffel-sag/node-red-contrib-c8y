@@ -35,18 +35,12 @@
         },
         oneditprepare: function () {
           console.log("node.deviceIds: " , this.deviceIds);
-            $('#node-input-filter').typedInput({
-                default: 'json',
-                typeField: $("#node-input-filterType"),
-                types: ['json']
-            });
                 var node = this;
                 function getDevices(devs) {
                     $('#node-input-context').typedInput({
                         default: 'Select',
                         typeField: $("#node-input-contextType"),
                         types: [
-                            'str',
                             {
                                 value: "Select",
                                 title: "Context",
@@ -62,7 +56,6 @@
                         default: 'Select',
                         typeField: $("#node-input-apisType"),
                         types: [
-                            'str',
                             {
                                 value: "Select",
                                 title: "APIs",
@@ -96,7 +89,7 @@
                     default: 'Select',
                     typeField: $("#node-input-deviceIdsType"),
                     types: [
-                        'json',
+                        'str',
                         {
                             value: "Select",
                             title: "Devices",
@@ -189,6 +182,12 @@ and credentials (Username and Password).
 Those can be obtained via a configuration (C8y Config Property) or through environment variables.
 Using evironment variables comes in handy if your running inside Cumulocity as a microservice. To use them check the Use ENV checkbox. 
 
+### 🔥Configuration🔥
+To get and select devices a two step approach is necessarry.
+At first configure the Cumulocity connection (C8y Config) then deploy the flow.
+Open the node again and select the devices you get notifications from. Deploy again.
+Now you should get new notifications.
+
 ### Inputs
 : Name (string) :  If not set notification-${subscription}.
 : Subscription (string Dropdown| string ) : Notification 2.0 Subscription name
@@ -196,16 +195,23 @@ Using evironment variables comes in handy if your running inside Cumulocity as a
 : nonPersistent (boolean) : Persistence of the subscription filter.
 : Context (string) : ManagedObjects or Tenant.
 : APIs (string) : Which APIs to subscribe to.
-: Devices (Dropdown | comma seperated strings) : Which Mo to subscribe to.
-: TypeFilter (string odata expression) : Which Type to subscribe to .
+: Devices (Dropdown | comma seperated strings) : Which Device to subscribe to.
+: TypeFilter (string odata expression) : Which Type to subscribe to.
 : Fragments to copy (comma seperated strings) : Which fragments to copy.
 
 ### outputs
 : payload (JSON string) : Received Notification 2.0 Message `msg.payload`
 
-### 🔥Configuration🔥
-To get and select devices a two step approach is necessarry.
-At first configure the Cumulocity connection (C8y Config) then deploy the flow.
-Open the node again and select a the available devices. Select devices  and deploy again.
-Now you should get new notifications. 
+### What happens in the Background
+You configure Subscriber, Subscription including a SubscriptionFilter.
+In Context ManagedObject you can also select which devices you want notificaitions from.
+This will create as many Subscriptions using the same name as devices are selected. 
+In Context Tenant no devices are neccessary hench the selection is ignored.
+After the subscriptionFilters are created a subscription is created by requesting a token using its name.
+Then the websocket tunnel is established. Notifications are deliverd.
+For more details have a look at [https://www.cumulocity.com/api/core/#tag/About-notifications-2.0](https://www.cumulocity.com/api/core/#tag/About-notifications-2.0)
+
+
+
+
 </script>
