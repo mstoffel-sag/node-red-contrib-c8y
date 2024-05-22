@@ -40,7 +40,8 @@ module.exports = function(RED) {
           );
           node.deviceIds = node.deviceIds.split(",").filter((s) => s.trim());
           node.debug("DeviceIds:" + JSON.stringify(node.deviceIds) );
-        node.apis = RED.util.evaluateNodeProperty(
+
+          node.apis = RED.util.evaluateNodeProperty(
           node.config.apis,
           node.config.apisType,
           node,
@@ -51,20 +52,21 @@ module.exports = function(RED) {
             node.apis = ["*"]
           }
           node.debug("APIs:" +JSON.stringify(node.apis ));
-        node.context = RED.util.evaluateNodeProperty(
+
+          node.context = RED.util.evaluateNodeProperty(
           node.config.context,
           node.config.contextType,
           node,
           undefined
         );
           node.debug("Context:" +JSON.stringify(node.context ));
-
       } catch (error) {
         node.error(error);
         return;
       }
 
       node.createFilter = async function (){
+          // Filter template
           let filter = {
             nonPersistent: node.nonPersistent,
             context: node.context,
@@ -80,21 +82,23 @@ module.exports = function(RED) {
               .split(",")
               .filter((s) => s.trim());
           }
-          console.log("Filter:", filter);
           if (node.context == "tenant") {
             // No device source allowed in tenant context
             node.debug("Remove deviceIds since tenant context");
             node.deviceIds = [""];
           }
+          node.debug("Filter template:", JSON.stringify(filter));
           if (node.subscription && node.deviceIds) {
             for (let index = 0; index < node.deviceIds.length; index++) {
                 const localFilter = { ...filter };
                 if (!isNaN( parseInt(node.deviceIds[index]))) {
                   localFilter.source = {};
                   localFilter.source.id = node.deviceIds[index];
+                }else{
+                  node.error("deviceId not numeric skipping.");
                 }
                 localFilter.subscription = node.subscription;
-                node.log("Filter: " + JSON.stringify(localFilter));
+                node.log("Addin Mo Filter: " + JSON.stringify(localFilter));
                 node.postFilter(localFilter);
               }
         } else {
@@ -102,6 +106,7 @@ module.exports = function(RED) {
         }
       }
 
+      // Create filter in Cumulocity
       node.postFilter = async function (filter){
                 const fetchOptions = {
                   method: "POST",
@@ -111,7 +116,6 @@ module.exports = function(RED) {
                     Accept: "application/json",
                   },
                 };
-
               let c8yres = undefined;
               try {
                 c8yres = await node.client.core.fetch(
@@ -123,7 +127,7 @@ module.exports = function(RED) {
                 return;
               }
             if (c8yres.status == 201) {
-                node.log("Filter created");
+                node.debug("Filter created");
             } else {
               node.error(
                 "Creating filter. " +
@@ -137,8 +141,10 @@ module.exports = function(RED) {
 
       }
 
+      // will get a token and start the websocket connection. Handles reconnection
       node.subscribeWS = async () => {
         await node.getToken();
+        // refresh token
         node.refreshTokenIntervalReference = setInterval(async () => {
           node.debug("Refresh Token");
           await node.getToken();
@@ -155,7 +161,6 @@ module.exports = function(RED) {
           ""
         )}/notification2/consumer/?token=${node.token}`;
         node.socket = new Websocket(url);
-
         node.socket.clientId = node.clientId;
         node.socket.onopen = function (e) {
           node.reconnectCount = 0;
@@ -186,15 +191,16 @@ module.exports = function(RED) {
                 message: JSON.parse(payload),
               },
             };
-            node.send(msg);
             // Ack message
-            node.socket.send(id);
+            try {
+              node.socket.send(id);
+              node.send(msg);
+            } catch (error) {
+              node.error(`[ws error] sending ack ${error} this can happen on closing connection`);
+            }
           };
-          node.socket.addEventListener("ping", (event) => {
-            console.log("Ping from server ", event.data);
-          });
           node.socket.addEventListener("pong", (event) => {
-            console.log("Pong from server ", event.data);
+            node.debug("Pong from server ", event.data);
           });
         };
 
@@ -275,8 +281,7 @@ module.exports = function(RED) {
       };
 
       node.on("close", (done) => {
-        console.debug("On Close: " ,done);
-        
+        node.debug("On Close");
         setNodeState(node, false);
         done();
       });
@@ -287,7 +292,7 @@ module.exports = function(RED) {
           clearInterval(node.refreshTokenIntervalReference);
           node.log("Closing ws connection");
           node.socket.close(1000, "Node Deactivated");
-          node.socket = undefined;
+//          node.socket = undefined;
         }
       };
 
@@ -301,7 +306,7 @@ module.exports = function(RED) {
     }
 
     // Manage node state
-    function setNodeState(node,state) {
+    setNodeState =  function (node,state) {
         if (state) {
             node.log(
               "Activating Subscription: " +
@@ -338,7 +343,7 @@ module.exports = function(RED) {
 
         const node = RED.nodes.getNode(id);
         if (node) {
-          node.debug(`Current Node State  ${node.config.active}  Command:  ${cmd}` );
+          node.debug(`httpAdmin /notificaiton/${id}/${cmd}` );
         }else{
           console.error("Node not found");
           res.sendStatus(404);
@@ -372,8 +377,8 @@ module.exports = function(RED) {
               res.json(data.map(extract));
              // console.log("Devices:" ,devices);
             } catch (error) {
-              console.error("Error fetching devices:", error);
-              throw error;
+              node.error("Error fetching devices:", error);
+              return;
             }
         } else {
           res.sendStatus(404);

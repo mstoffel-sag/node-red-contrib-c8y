@@ -1,9 +1,8 @@
-<script src="resources/node-red-contrib-c8y/configheader.js"></script>
 <script type="text/javascript">
 
     RED.nodes.registerType('notification',{
         category: 'Cumulocity',
-        color: '#a6bbcf',
+        color: '#45c4ba',
         defaults: {
             name: {value:""},
             c8yconfig: {value:"", type:"c8yconfig", required: true},
@@ -28,7 +27,7 @@
             deviceIdsType: {value: "Select"},
         },
         inputs: 0,
-        icon: "file.png",
+        icon: "envelope.svg",
         outputs:1,
         label: function() {
             return this.name ||"notification-" + this.subscription;

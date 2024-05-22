@@ -63,7 +63,6 @@ module.exports = function(RED) {
           .fetch(endpoint, fetchOptions)
           .then(
             (res) => {
-              console.log("Res:" , res)
               msg.status = res.status;
               delete msg.body;
               delete msg.headers;
@@ -71,7 +70,7 @@ module.exports = function(RED) {
               if (res.status !== 204) {
                 return res.json().then(
                   (json) => {
-                    node.debug("res:" + json);
+                    node.debug("res:" + JSON.stringify(json));
                     msg.payload = json;
                     node.send(msg);
                   },

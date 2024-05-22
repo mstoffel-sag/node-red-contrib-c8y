@@ -1,7 +1,7 @@
 <script type="text/javascript">
     RED.nodes.registerType('realtime',{
-        category: 'Cumulocity Realtime',
-        color: '#a6bbcf',
+        category: 'Cumulocity',
+        color: '#45c4ba',
         defaults: {
             name: {value:""},
             active: {value: true},
@@ -12,7 +12,7 @@
         },
         inputs:0,
         outputs:1,
-        icon: "file.png",
+        icon: "font-awesome/fa-commenting-o",
         label: function() {
             return this.name ||"realtime-" + this.api;
         },
@@ -65,5 +65,5 @@
 </script>
 
 <script type="text/html" data-help-name="realtime">
-    <p>A node that subscribes for realtime updates of Cumulocity events. This can be either done by specifying a particular deviceId or you subscribe for all devices by using a wildcard as a deviceId.</p>
+    <p>A node that subscribes for realtime updates of Cumulocity events. This can be either done by specifying a particular deviceId or you subscribe for all devices by using a wildcard as a deviceId. !DEPRECATED! Please use the notification node instead to get reliable messages. </p>
 </script>

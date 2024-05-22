@@ -2,7 +2,7 @@
 <script type="text/javascript">
     RED.nodes.registerType('call-endpoint',{
         category: 'Cumulocity',
-        color: '#a6bbcf',
+        color: '#45c4ba',
         defaults: {
             name: {value:""},
             c8yconfig: {value:"", type:"c8yconfig"},
@@ -52,7 +52,7 @@
         },
         inputs:1,
         outputs:1,
-        icon: "file.png",
+        icon: "bridge.svg",
         label: function() {
             return this.name||"call-endpoint";
         },

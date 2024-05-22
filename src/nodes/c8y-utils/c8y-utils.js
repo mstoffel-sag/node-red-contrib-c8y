@@ -68,6 +68,7 @@ let createDeviceandAddExternalId = async function createDeviceandAddExternalId(
 };
 
 let getCredentials = function getCredentials(RED, node) {
+  node.c8yconfig = RED.nodes.getNode(node.config.c8yconfig);
   if (node.config.useenv === true) {
     node.C8Y_TENANT = process.env.C8Y_TENANT;
     node.C8Y_BASEURL = process.env.C8Y_BASEURL;
